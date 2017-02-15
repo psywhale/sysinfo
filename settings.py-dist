@@ -9,3 +9,6 @@ HOSTS = ["172.22.10.22",
 HOSTS = ["vcenter.somewhere.tld"]
 USER = "User"
 PASSWORD = ""
+
+#OUTPUT possible values are CSV, MD, Stdout
+OUTPUT = MD

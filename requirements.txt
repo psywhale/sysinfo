@@ -3,3 +3,4 @@ pyvmomi<=6.0.0.2016.6
 requests<=2.11.1
 setuptools<=18.1
 six<=1.10.0
+markdown<=2.6.8
