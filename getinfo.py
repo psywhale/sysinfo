@@ -2,6 +2,7 @@ from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vmodl
 from pyVmomi import vim
 from datetime import date, datetime
+from os import getcwd, access
 
 import getpass
 import ssl
@@ -50,20 +51,25 @@ def PrintVmMD(vm, depth=1):
     summary = vm.summary
     guest = vm.guest
 
-    vmMD = open(summary.config.name+".md", "w")
+    try:
+        vmMD = open(settings.OUTPUTDIR+summary.config.name+".md", "w")
+    except PermissionError:
+        raise
+        print("File permission error")
 
-    vmMD.write("#Basic Documentation for "+summary.config.name+"\n")
-    vmMD.write("###Document Versions:\n"
+
+    vmMD.write("# Basic Documentation for "+summary.config.name+"\n")
+    vmMD.write("### Document Versions:\n"
                "version 2  " + date.today().isoformat() + "\n")
-    vmMD.write("###Summary\n")
+    vmMD.write("### Summary\n")
 
     annotation = summary.config.annotation
     str(annotation).encode(encoding='utf-8')
     test = re.sub("[^A-Za-z#\n0-9. :]","",annotation)
     if annotation != None and annotation != "":
         vmMD.write(test+"\n")
-    vmMD.write("###Software Information\n")
-    vmMD.write("####General Information\n")
+    vmMD.write("### Software Information\n")
+    vmMD.write("#### General Information\n")
     vmMD.write("OS Name: " + summary.config.guestFullName + "\n\n")
     vmMD.write("CPU(s) : " + str(summary.config.numCpu) + "\n\n")
     vmMD.write("Cores per Socket: " + str(summary.vm.config.hardware.numCoresPerSocket) + "\n\n")
@@ -75,13 +81,13 @@ def PrintVmMD(vm, depth=1):
                    str(makeItGB(disk.freeSpace)) + "/" + str(makeItGB(disk.capacity)) + "GB \n")
 
 
-    vmMD.write("###Network Configuration\n")
-    vmMD.write("####Management Configuration\n")
+    vmMD.write("\n### Network Configuration\n")
+    vmMD.write("#### Management Configuration\n")
     vmMD.write("Management IP/Website : vcenter.campus.wosc.edu\n\n")
     vmMD.write("Management Port: 9443\n\n")
     vmMD.write("Perferred Method: VMware vSphere web client\n\n")
-    
-    vmMD.write("####IP Configuration\n")
+
+    vmMD.write("#### IP Configuration\n")
 
     networks = guest.net
     for network in networks:

@@ -12,3 +12,6 @@ PASSWORD = ""
 
 #OUTPUT possible values are CSV, MD, Stdout
 OUTPUT = MD
+
+# directory to store md files
+OUTPUTDIR = ""
