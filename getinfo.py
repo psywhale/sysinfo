@@ -65,7 +65,7 @@ def PrintVmMD(vm, depth=1):
 
     annotation = summary.config.annotation
     str(annotation).encode(encoding='utf-8')
-    test = re.sub("[^A-Za-z#\n0-9. :]","",annotation)
+    test = re.sub("[^A-Za-z#\n0-9. :*_><\[\](),!;?'\"]", "", annotation)
     if annotation != None and annotation != "":
         vmMD.write(test+"\n")
     vmMD.write("### Software Information\n")
@@ -200,6 +200,7 @@ def PrintVmInfo(vm, depth=1):
 
     summary = vm.summary
     guest = vm.guest
+
     print("Host         : ", summary.runtime.host.name)
     print("Name         : ", summary.config.name)
     print("Path         : ", summary.config.vmPathName)
