@@ -2,9 +2,14 @@ from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vmodl
 from pyVmomi import vim
 from datetime import date, datetime
+
+from jinja2 import Environment, PackageLoader, select_autoescape
+
 from os import getcwd, access
 
 import argparse
+
+
 
 import getpass
 import ssl
@@ -29,6 +34,7 @@ def PrintVmMD(vm, depth=1):
     """
     maxdepth = 10
 
+
     # if this is a group it will have children. if it does, recurse into them
     # and then return
     if hasattr(vm, 'childEntity'):
@@ -36,7 +42,7 @@ def PrintVmMD(vm, depth=1):
             return
         vmList = vm.childEntity
         for c in vmList:
-            PrintVmInfo(c, depth+1)
+            PrintVmMD(c, depth+1)
         return
 
     # if this is a vApp, it likely contains child VMs
@@ -76,18 +82,12 @@ def PrintVmMD(vm, depth=1):
     vmMD.write("RAM: " + str(summary.config.memorySizeMB) + "\n\n")
     vmMD.write("Hard Drive: " + str(summary.config.numVirtualDisks) + "\n\n")
     disks = guest.disk
+
     for disk in disks:
-        vmMD.write("* Mount: "+ disk.diskPath + "   \nSize (free/total): " +
-                   str(makeItGB(disk.freeSpace)) + "/" + str(makeItGB(disk.capacity)) + "GB \n")
+        disk.capacity = str(makeItGB(disk.capacity))
+        vmMD.write("* Mount: "+ disk.diskPath + disk.capacity + "GB \n")
 
 
-    vmMD.write("\n### Network Configuration\n")
-    vmMD.write("#### Management Configuration\n")
-    vmMD.write("Management IP/Website : vcenter.campus.wosc.edu\n\n")
-    vmMD.write("Management Port: 9443\n\n")
-    vmMD.write("Perferred Method: VMware vSphere web client\n\n")
-
-    vmMD.write("#### IP Configuration\n")
 
     networks = guest.net
     for network in networks:
@@ -109,6 +109,10 @@ def PrintVmMD(vm, depth=1):
 
 
 def main():
+    env = Environment(loader=PackageLoader('getinfo','template'))
+    blank = env.get_template("blank.md")
+    print(blank.render())
+    exit()
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
     context.verify_mode = ssl.CERT_NONE
     if not settings.PASSWORD:
