@@ -1,5 +1,11 @@
-pip>=8.1.2
-pyvmomi>=6.0.0.2016.6
-requests>=2.11.1
-six>=1.10.0
+appdirs>=1.4.3
+Jinja2>=2.9.5
 Markdown>=2.6.8
+MarkupSafe>=1.0
+packaging>=16.8
+pip>=9.0.1
+pyparsing>=2.2.0
+pyvmomi>=6.5
+requests>=2.13.0
+setuptools>=34.3.2
+six>=1.10.0

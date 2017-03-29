@@ -4,6 +4,8 @@ from pyVmomi import vim
 from datetime import date, datetime
 from os import getcwd, access
 
+import argparse
+
 import getpass
 import ssl
 import atexit
@@ -18,9 +20,6 @@ def makeItGB(number):
         return False
 
 
-def PrintCSVHead():
-    print("host,name,path,guest,cpus,cores/socket,ramMB,Disk Qty, network, disk, state,Annotation")
-    return
 
 
 def PrintVmMD(vm, depth=1):
@@ -54,8 +53,9 @@ def PrintVmMD(vm, depth=1):
     try:
         vmMD = open(settings.OUTPUTDIR+summary.config.name+".md", "w")
     except PermissionError:
-        raise
         print("File permission error")
+        raise
+
 
 
     vmMD.write("# Basic Documentation for "+summary.config.name+"\n")
@@ -107,70 +107,6 @@ def PrintVmMD(vm, depth=1):
 
     vmMD.close()
 
-def PrintVMCVS(vm, depth=1):
-    """
-        Print information for a particular virtual machine or recurse into a folder
-        or vApp with depth protection
-        """
-    maxdepth = 10
-
-    # if this is a group it will have children. if it does, recurse into them
-    # and then return
-    if hasattr(vm, 'childEntity'):
-        if depth > maxdepth:
-            return
-        vmList = vm.childEntity
-        for c in vmList:
-            PrintVmInfo(c, depth + 1)
-        return
-
-    # if this is a vApp, it likely contains child VMs
-    # (vApps can nest vApps, but it is hardly a common usecase, so ignore that)
-    if isinstance(vm, vim.VirtualApp):
-        vmList = vm.vm
-        for c in vmList:
-            PrintVmInfo(c, depth + 1)
-        return
-
-    summary = vm.summary
-    guest = vm.guest
-    print(summary.runtime.host.name + "," + summary.config.name + "," + summary.config.vmPathName + "," +
-          summary.config.guestFullName + "," +
-          str(summary.config.numCpu) + "," +
-          str(summary.vm.config.hardware.numCoresPerSocket) + "," +
-          str(summary.config.memorySizeMB) + "," +
-          str(summary.config.numVirtualDisks) + ","
-          , end='')
-
-    networks = guest.net
-    disks = guest.disk
-
-    for network in networks:
-        if network.ipAddress:
-            ipv4 = list(network.ipAddress)[0]
-        else:
-            ipv4 = None
-
-        print("[", network.network, " IP ", str(ipv4).replace("\n", ""), " mac ", network.macAddress, "]", end='')
-
-
-        print(",", end='')
-
-    for disk in disks:
-        print("[disk:", disk.diskPath, " Size: ", makeItGB(disk.freeSpace), "/", makeItGB(disk.capacity), "GB ]",
-                  end='')
-        print(",", end='')
-
-        print(summary.runtime.powerState + ",", end="")
-
-    if summary.runtime.question != None:
-        False
-        # print("Question  : ", summary.runtime.question.text)
-    annotation = summary.config.annotation
-    if annotation != None and annotation != "":
-        print("\"" + annotation + "\"", end="")
-
-    print("")
 
 
 def PrintVmInfo(vm, depth=1):
@@ -248,8 +184,7 @@ def main():
     context.verify_mode = ssl.CERT_NONE
     if not settings.PASSWORD:
         settings.PASSWORD = getpass.getpass("Password:")
-    if settings.OUTPUT is "CSV":
-        PrintCSVHead()
+
 
     for host in settings.HOSTS:
         try:
@@ -260,9 +195,10 @@ def main():
             atexit.register(Disconnect, si)
             content = si.RetrieveContent()
             container = content.rootFolder
-            viewType = [vim.VirtualMachine]
+            viewtype = [vim.VirtualMachine]
+
             recursive = True
-            containerView = content.viewManager.CreateContainerView(container,viewType,recursive)
+            containerView = content.viewManager.CreateContainerView(container, viewtype, recursive)
             children = containerView.view
 
             for child in children:
