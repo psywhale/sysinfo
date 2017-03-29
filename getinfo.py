@@ -1,9 +1,12 @@
 from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vmodl
 from pyVmomi import vim
+from pyVmomi.VmomiSupport import LazyObject
 from datetime import date, datetime
 
 from jinja2 import Environment, PackageLoader, select_autoescape
+env = Environment(loader=PackageLoader('getinfo','template'))
+blank = env.get_template("blank.md")
 
 from os import getcwd, access
 
@@ -35,6 +38,8 @@ def PrintVmMD(vm, depth=1):
     maxdepth = 10
 
 
+
+
     # if this is a group it will have children. if it does, recurse into them
     # and then return
     if hasattr(vm, 'childEntity'):
@@ -61,58 +66,60 @@ def PrintVmMD(vm, depth=1):
     except PermissionError:
         print("File permission error")
         raise
+    data = LazyObject()
+
+    data.name = summary.config.name
+    data.date = date.today().isoformat()
+    data.summary = str(summary.config.annotation).encode(encoding='utf-8')
+    data.os = summary.config.guestFullName
+    data.cpucount = str(summary.config.numCpu)
+    data.socket = str(summary.vm.config.hardware.numCoresPerSocket)
+    data.memory = str(summary.config.memorySizeMB) + " MB"
+    data.numDisks = str(summary.config.numVirtualDisks)
+
+
+    disksraw = guest.disk
+    disks = LazyObject()
+    x = 0
+
+    for disk in disksraw:
+
+        disks[x].capacity = str(makeItGB(disk.capacity))
+        disks[x].diskPath = disk.diskPath
+
+        x.__add__(1)
+        # vmMD.write("* Mount: "+ disk.diskPath + disk.capacity + "GB \n")
+
+    data.disks = disks
 
 
 
-    vmMD.write("# Basic Documentation for "+summary.config.name+"\n")
-    vmMD.write("### Document Versions:\n"
-               "version 2  " + date.today().isoformat() + "\n")
-    vmMD.write("### Summary\n")
-
-    annotation = summary.config.annotation
-    str(annotation).encode(encoding='utf-8')
-    test = re.sub("[^A-Za-z#\n0-9. :*_><\[\](),!;?'\"]", "", annotation)
-    if annotation != None and annotation != "":
-        vmMD.write(test+"\n")
-    vmMD.write("### Software Information\n")
-    vmMD.write("#### General Information\n")
-    vmMD.write("OS Name: " + summary.config.guestFullName + "\n\n")
-    vmMD.write("CPU(s) : " + str(summary.config.numCpu) + "\n\n")
-    vmMD.write("Cores per Socket: " + str(summary.vm.config.hardware.numCoresPerSocket) + "\n\n")
-    vmMD.write("RAM: " + str(summary.config.memorySizeMB) + "\n\n")
-    vmMD.write("Hard Drive: " + str(summary.config.numVirtualDisks) + "\n\n")
-    disks = guest.disk
-
-    for disk in disks:
-        disk.capacity = str(makeItGB(disk.capacity))
-        vmMD.write("* Mount: "+ disk.diskPath + disk.capacity + "GB \n")
-
-
-
-    networks = guest.net
-    for network in networks:
+    networksraw = guest.net
+    x = 0
+    networks = []
+    for network in networksraw:
+        networks.append(x)
         if network.ipAddress:
             ipv4 = list(network.ipAddress)[0]
+            networks[x].ipv4 = str(ipv4).replace("\n", "")
         else:
-            ipv4 = None
+            networks[x].ipv4 = None
         if network.macAddress:
-            mac = network.macAddress
+            networks[x].mac = network.macAddress
         else:
-            mac = None
-        try:
-            vmMD.write("* Net: " + network.network + " IP: " + str(ipv4).replace("\n", "") +
-                   " MAC: " + str(mac) + "\n")
-        except:
-            print("ERROR! ",summary.config.name, " no mac?")
+            networks[x].mac = None
 
+        networks[x].network = network.network
+        x.__add__(1)
+
+    data.Net = networks
+
+    vmMD.write(blank.render(data))
     vmMD.close()
 
 
 def main():
-    env = Environment(loader=PackageLoader('getinfo','template'))
-    blank = env.get_template("blank.md")
-    print(blank.render())
-    exit()
+
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
     context.verify_mode = ssl.CERT_NONE
     if not settings.PASSWORD:
