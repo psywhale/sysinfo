@@ -3,20 +3,18 @@ from pyVmomi import vmodl
 from pyVmomi import vim
 
 from datetime import date, datetime
+import argparse
+import getpass
+import ssl
+import atexit
+import settings
+
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 env = Environment(loader=PackageLoader('getinfo','template'))
 blank = env.get_template("blank.md")
 
 
-import argparse
-
-
-
-import getpass
-import ssl
-import atexit
-import settings
 
 
 
@@ -27,6 +25,37 @@ def makeItGB(number):
         return False
 
 
+def initializeTemplate(vm, depth=1):
+    """
+    Create templates for each vm to be modifed by hand for info unavailable via sdk
+    :param vm:
+    :param depth:
+    :return:
+    """
+
+    if hasattr(vm, 'childEntity'):
+        if depth > maxdepth:
+            return
+        vmList = vm.childEntity
+        for c in vmList:
+            PrintVmMD(c, depth+1)
+        return
+
+    # if this is a vApp, it likely contains child VMs
+    # (vApps can nest vApps, but it is hardly a common usecase, so ignore that)
+    if isinstance(vm, vim.VirtualApp):
+        vmList = vm.vm
+        for c in vmList:
+            PrintVmMD(c, depth + 1)
+        return
+
+    summary = vm.summary
+    guest = vm.guest
+
+    blank = open("template/blank.md", "r")
+
+    vmMD = open("template/" + summary.config.name + ".md", "w")
+    vmMD.write(blank.read())
 
 
 def PrintVmMD(vm, depth=1):
@@ -60,6 +89,7 @@ def PrintVmMD(vm, depth=1):
     summary = vm.summary
     guest = vm.guest
 
+
     try:
         vmMD = open(settings.OUTPUTDIR+summary.config.name+".md", "w")
     except PermissionError:
@@ -69,13 +99,12 @@ def PrintVmMD(vm, depth=1):
 
     data["name"] = summary.config.name
     data["date"] = date.today().isoformat()
-    data["summary"] = str(summary.config.annotation).encode(encoding='utf-8')
+    data["summary"] = str(summary.config.annotation)
     data["os"] = summary.config.guestFullName
     data["cpucount"] = str(summary.config.numCpu)
     data["socket"] = str(summary.vm.config.hardware.numCoresPerSocket)
     data["memory"] = str(summary.config.memorySizeMB) + " MB"
     data["numDisks"] = str(summary.config.numVirtualDisks)
-
 
     disksraw = guest.disk
     info = {}
@@ -116,14 +145,20 @@ def PrintVmMD(vm, depth=1):
         info = {}
 
     data["Net"] = networks
-    print(data["Net"])
+    try:
+        doc = env.get_template(summary.config.name + ".md")
+    except:
+        initializeTemplate(vm)
+        doc = env.get_template(summary.config.name + ".md")
+        print("Uhh "+summary.config.name+" template was not there.. made one for you. \n You will need to modify it"
+                                         " as it is blank")
 
-
-    vmMD.write(blank.render(data))
+    vmMD.write(doc.render(data))
     vmMD.close()
 
 
 def main():
+
 
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
     context.verify_mode = ssl.CERT_NONE
@@ -147,7 +182,10 @@ def main():
             children = containerView.view
 
             for child in children:
-                PrintVmMD(child)
+                if args.init:
+                    initializeTemplate(child)
+                else:
+                    PrintVmMD(child)
 
 
         except vmodl.MethodFault as error:
@@ -157,4 +195,12 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--init", help="Creates Blank templates for each VM found. "
+                                             "Stored in ./template to use to create docs. These then can be modified"
+                                             " by hand.",
+                        action="store_true")
+    args = parser.parse_args()
+
+
     main()
