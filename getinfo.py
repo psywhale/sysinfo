@@ -201,6 +201,4 @@ if __name__ == '__main__':
                                              " by hand.",
                         action="store_true")
     args = parser.parse_args()
-
-
     main()
