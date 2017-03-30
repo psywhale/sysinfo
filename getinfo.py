@@ -1,14 +1,13 @@
 from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vmodl
 from pyVmomi import vim
-from pyVmomi.VmomiSupport import LazyObject
+
 from datetime import date, datetime
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 env = Environment(loader=PackageLoader('getinfo','template'))
 blank = env.get_template("blank.md")
 
-from os import getcwd, access
 
 import argparse
 
@@ -18,7 +17,7 @@ import getpass
 import ssl
 import atexit
 import settings
-import re
+
 
 
 def makeItGB(number):
@@ -66,53 +65,59 @@ def PrintVmMD(vm, depth=1):
     except PermissionError:
         print("File permission error")
         raise
-    data = LazyObject()
+    data = {}
 
-    data.name = summary.config.name
-    data.date = date.today().isoformat()
-    data.summary = str(summary.config.annotation).encode(encoding='utf-8')
-    data.os = summary.config.guestFullName
-    data.cpucount = str(summary.config.numCpu)
-    data.socket = str(summary.vm.config.hardware.numCoresPerSocket)
-    data.memory = str(summary.config.memorySizeMB) + " MB"
-    data.numDisks = str(summary.config.numVirtualDisks)
+    data["name"] = summary.config.name
+    data["date"] = date.today().isoformat()
+    data["summary"] = str(summary.config.annotation).encode(encoding='utf-8')
+    data["os"] = summary.config.guestFullName
+    data["cpucount"] = str(summary.config.numCpu)
+    data["socket"] = str(summary.vm.config.hardware.numCoresPerSocket)
+    data["memory"] = str(summary.config.memorySizeMB) + " MB"
+    data["numDisks"] = str(summary.config.numVirtualDisks)
 
 
     disksraw = guest.disk
-    disks = LazyObject()
-    x = 0
+    info = {}
+    disks = []
+
 
     for disk in disksraw:
 
-        disks[x].capacity = str(makeItGB(disk.capacity))
-        disks[x].diskPath = disk.diskPath
+        info["capacity"] = str(makeItGB(disk.capacity)) + " GB"
+        info["diskPath"] = disk.diskPath
 
-        x.__add__(1)
-        # vmMD.write("* Mount: "+ disk.diskPath + disk.capacity + "GB \n")
+        disks.append(info)
+        info = {}
 
-    data.disks = disks
+    data["disks"] = disks
+
 
 
 
     networksraw = guest.net
-    x = 0
+
+    info = {}
     networks = []
     for network in networksraw:
-        networks.append(x)
+
         if network.ipAddress:
             ipv4 = list(network.ipAddress)[0]
-            networks[x].ipv4 = str(ipv4).replace("\n", "")
+            info["ipv4"] = str(ipv4).replace("\n", "")
         else:
-            networks[x].ipv4 = None
+            info["ipv4"] = None
         if network.macAddress:
-            networks[x].mac = network.macAddress
+            info["mac"] = network.macAddress
         else:
-            networks[x].mac = None
+            info["mac"] = None
 
-        networks[x].network = network.network
-        x.__add__(1)
+        info["network"] = network.network
+        networks.append(info)
+        info = {}
 
-    data.Net = networks
+    data["Net"] = networks
+    print(data["Net"])
+
 
     vmMD.write(blank.render(data))
     vmMD.close()

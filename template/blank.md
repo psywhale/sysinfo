@@ -59,10 +59,14 @@ na
    * 22 ssh ;
    
 #### IP Configuration
-{{ Net }}
-* Subnet
-* Gw
-* dns
+{% for net in Net %}
+* {{ net.mac }}
+  * Network: {{ net.network }}
+  * {{ net.ipv4 }}
+  * Subnet
+  * Gw
+  * dns
+{% endfor %}
 
 #### Management Interfaces
 * vcenter.campus.wosc.edu
