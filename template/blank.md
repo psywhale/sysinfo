@@ -49,7 +49,9 @@ na
 {% for disk in disks %}
     * Mount {{ disk.diskPath }}  {{ disk.capacity }}
 {% endfor %}
+
 ### Network Information
+
 #### Firewall Information
 * Watchguard HLC144
 * NAT IP aka Public IP: 164.58.169.XXX 

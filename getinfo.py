@@ -9,6 +9,7 @@ import ssl
 import atexit
 import settings
 import os
+import sh
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -52,10 +53,11 @@ def initializeTemplate(vm, depth=1):
     guest = vm.guest
 
     blank = open("template"+os.sep+"blank.md", "r")
-    workingdir = args.workdir
+    workingdir = args.workdir+"/drafts"
 
     vmMD = open(workingdir + os.sep + summary.config.name + ".md", "w")
     vmMD.write(blank.read())
+    vmMD.close()
 
 
 def PrintVmMD(vm, depth=1):
@@ -91,7 +93,7 @@ def PrintVmMD(vm, depth=1):
 
 
     try:
-        vmMD = open(args.outputdir+os.sep+summary.config.name+".md", "w")
+        vmMD = open(args.workdir+os.sep+"final"+os.sep+"virtual"+os.sep+summary.config.name+".md", "w")
     except PermissionError:
         print("File permission error")
         raise
@@ -196,10 +198,11 @@ def checkdirs():
         if args.verbose:
             print("Creating directory "+args.workdir)
         os.makedirs(args.workdir)
-    if not os.path.isdir(args.outputdir):
-        if args.verbose:
-            print("Creating directory "+args.outputdir)
-        os.makedirs(args.outputdir)
+
+    # if not os.path.isdir(args.outputdir):
+    #     if args.verbose:
+    #         print("Creating directory "+args.outputdir)
+    #     os.makedirs(args.outputdir)
 
 
 if __name__ == '__main__':
@@ -212,14 +215,18 @@ if __name__ == '__main__':
                                                  "from draft templates")
     parser.add_argument("workdir", help="working directory to store documentation drafts", default="drafts"
                         )
-    parser.add_argument("outputdir", help="directory to store final documentation rendered from"
-                                                  " drafts", default="finaldoc")
 
     parser.add_argument("-v", "--verbose",help="Be more verbose", action="store_true")
 
     args = parser.parse_args()
     env = Environment(loader=PackageLoader('getinfo', 'template'))
     blank = env.get_template("blank.md")
-    envdrafts = Environment(loader=PackageLoader('getinfo', args.workdir))
     checkdirs()
+    gitstuff = sh.git.bake(_cwd=args.workdir)
+    gitstuff.clone(settings.DRAFTREPO, "drafts")
+    gitstuff.clone(settings.FINALREPO, "final")
+    envdrafts = Environment(loader=PackageLoader('getinfo', args.workdir+"/drafts"))
+
+
+
     main()
