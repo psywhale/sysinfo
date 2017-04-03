@@ -150,7 +150,8 @@ def PrintVmMD(vm, depth=1):
     except:
         initializeTemplate(vm)
         doc = envdrafts.get_template(summary.config.name + ".md")
-        print("["+summary.config.name+"] draft not found.. Created blank at: "+args.workdir+os.sep+summary.config.name +
+        if args.verbose:
+            print("["+summary.config.name+"] draft not found.. Created blank at: "+args.workdir+os.sep+summary.config.name +
               ".md")
 
     vmMD.write(doc.render(data))
@@ -182,16 +183,23 @@ def main():
             children = containerView.view
 
             for child in children:
-                if args.init:
-                    initializeTemplate(child)
-                else:
-                    PrintVmMD(child)
+                PrintVmMD(child)
 
 
         except vmodl.MethodFault as error:
             print("Error:" + error.msg)
             return -1
     return 0
+
+def checkdirs():
+    if not os.path.isdir(args.workdir):
+        if args.verbose:
+            print("Creating directory "+args.workdir)
+        os.makedirs(args.workdir)
+    if not os.path.isdir(args.outputdir):
+        if args.verbose:
+            print("Creating directory "+args.outputdir)
+        os.makedirs(args.outputdir)
 
 
 if __name__ == '__main__':
@@ -201,11 +209,11 @@ if __name__ == '__main__':
     parser.add_argument("outputdir", help="directory to store documentation final documentation rendered from"
                                                   " drafts", default="finaldoc")
 
-
-
+    parser.add_argument("-v", "--verbose",help="Be more verbose", action="store_true")
 
     args = parser.parse_args()
     env = Environment(loader=PackageLoader('getinfo', 'template'))
     blank = env.get_template("blank.md")
     envdrafts = Environment(loader=PackageLoader('getinfo', args.workdir))
+    checkdirs()
     main()
