@@ -203,10 +203,16 @@ def checkdirs():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Pulls basic info about virtual machines from a vcenter\n"
+                                                 "and put it into a markdown formatted file template. This\n"
+                                                 "\"draft\" can then be filled in by hand for what info that\n"
+                                                 " can not be pulled from vcenter. "
+                                                 "After all drafts are complete, "
+                                                 "re-run this program to generate final documentation "
+                                                 "from draft templates")
     parser.add_argument("workdir", help="working directory to store documentation drafts", default="drafts"
                         )
-    parser.add_argument("outputdir", help="directory to store documentation final documentation rendered from"
+    parser.add_argument("outputdir", help="directory to store final documentation rendered from"
                                                   " drafts", default="finaldoc")
 
     parser.add_argument("-v", "--verbose",help="Be more verbose", action="store_true")
