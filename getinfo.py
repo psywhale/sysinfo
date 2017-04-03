@@ -8,11 +8,10 @@ import getpass
 import ssl
 import atexit
 import settings
-
+import os
 
 from jinja2 import Environment, PackageLoader, select_autoescape
-env = Environment(loader=PackageLoader('getinfo','template'))
-blank = env.get_template("blank.md")
+
 
 
 
@@ -52,9 +51,10 @@ def initializeTemplate(vm, depth=1):
     summary = vm.summary
     guest = vm.guest
 
-    blank = open("template/blank.md", "r")
+    blank = open("template"+os.sep+"blank.md", "r")
+    workingdir = args.workdir
 
-    vmMD = open("template/" + summary.config.name + ".md", "w")
+    vmMD = open(workingdir + os.sep + summary.config.name + ".md", "w")
     vmMD.write(blank.read())
 
 
@@ -91,7 +91,7 @@ def PrintVmMD(vm, depth=1):
 
 
     try:
-        vmMD = open(settings.OUTPUTDIR+summary.config.name+".md", "w")
+        vmMD = open(args.outputdir+os.sep+summary.config.name+".md", "w")
     except PermissionError:
         print("File permission error")
         raise
@@ -146,12 +146,12 @@ def PrintVmMD(vm, depth=1):
 
     data["Net"] = networks
     try:
-        doc = env.get_template(summary.config.name + ".md")
+        doc = envdrafts.get_template(summary.config.name + ".md")
     except:
         initializeTemplate(vm)
-        doc = env.get_template(summary.config.name + ".md")
-        print("Uhh "+summary.config.name+" template was not there.. made one for you. \n You will need to modify it"
-                                         " as it is blank")
+        doc = envdrafts.get_template(summary.config.name + ".md")
+        print("["+summary.config.name+"] draft not found.. Created blank at: "+args.workdir+os.sep+summary.config.name +
+              ".md")
 
     vmMD.write(doc.render(data))
     vmMD.close()
@@ -196,9 +196,16 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--init", help="Creates Blank templates for each VM found. "
-                                             "Stored in ./template to use to create docs. These then can be modified"
-                                             " by hand.",
-                        action="store_true")
+    parser.add_argument("workdir", help="working directory to store documentation drafts", default="drafts"
+                        )
+    parser.add_argument("outputdir", help="directory to store documentation final documentation rendered from"
+                                                  " drafts", default="finaldoc")
+
+
+
+
     args = parser.parse_args()
+    env = Environment(loader=PackageLoader('getinfo', 'template'))
+    blank = env.get_template("blank.md")
+    envdrafts = Environment(loader=PackageLoader('getinfo', args.workdir))
     main()
