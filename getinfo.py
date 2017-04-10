@@ -193,16 +193,31 @@ def main():
             return -1
     return 0
 
+
 def checkdirs():
     if not os.path.isdir(args.workdir):
         if args.verbose:
             print("Creating directory "+args.workdir)
         os.makedirs(args.workdir)
-
-    # if not os.path.isdir(args.outputdir):
-    #     if args.verbose:
-    #         print("Creating directory "+args.outputdir)
-    #     os.makedirs(args.outputdir)
+        gitstuff = sh.git.bake(_cwd=args.workdir)
+        gitstuff.clone(settings.DRAFTREPO, "drafts")
+        gitstuff.clone(settings.FINALREPO, "final")
+    else:
+        if os.path.isdir(args.workdir+os.sep+"final"):
+            gitstuff = sh.git.bake(_cwd=args.workdir+os.sep+"final")
+            try:
+                run = gitstuff.pull()
+                print("final: " + repr(run))
+            except:
+                print("ERROR! final: " + repr(run))
+                raise
+        if os.path.isdir(args.workdir + os.sep + "drafts"):
+            gitstuff = sh.git.bake(_cwd=args.workdir + os.sep + "drafts")
+            try:
+                run = gitstuff.pull()
+                print("Drafts: "+repr(run))
+            except:
+                raise
 
 
 if __name__ == '__main__':
@@ -222,11 +237,7 @@ if __name__ == '__main__':
     env = Environment(loader=PackageLoader('getinfo', 'template'))
     blank = env.get_template("blank.md")
     checkdirs()
-    gitstuff = sh.git.bake(_cwd=args.workdir)
-    gitstuff.clone(settings.DRAFTREPO, "drafts")
-    gitstuff.clone(settings.FINALREPO, "final")
+
     envdrafts = Environment(loader=PackageLoader('getinfo', args.workdir+"/drafts"))
-
-
 
     main()
